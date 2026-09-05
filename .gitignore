@@ -13,6 +13,12 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+*CSMAR*
+*csmar*
+*STK_MKT*
+*TRD_Dalyr*
+*Dret*
+Daily Trading Derivative Indices*/
 
 # Generated thesis outputs
 outputs/tables/*
