@@ -18,10 +18,11 @@ The reconstructed pipeline follows the thesis methodology:
 
 - Events: April 2, April 7, and April 9, 2025 tariff-policy announcements.
 - Method: market-model event study.
-- Estimation window: 120 trading days before the event window.
+- Estimation window: `[-120,-21]` trading days before the first event date, following the thesis methodology.
 - Event windows: `[-1,+1]`, `[-3,+3]`, and `[-5,+5]`.
 - Main outputs: abnormal returns, average abnormal returns, cumulative abnormal returns, cumulative average abnormal returns, t-tests, and Chapter 4 tables/figures.
 - Cross-sectional regression: April 7 CAR as the dependent variable, with `Beta`, `Size`, and `IdioVol` as explanatory variables.
+- Firm size: natural logarithm of average market capitalization during the estimation window.
 
 Known validation target from the thesis draft:
 

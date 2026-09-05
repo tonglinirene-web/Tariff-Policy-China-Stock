@@ -18,14 +18,28 @@ DEFAULT_COLUMN_MAP = {
     "date": "date",
     "Dretwd": "stock_return",
     "dretwd": "stock_return",
+    "Dretnd": "stock_return",
+    "dretnd": "stock_return",
     "Return": "stock_return",
     "ret": "stock_return",
+    "Idxtrd01": "date",
+    "idxtrd01": "date",
+    "Idxtrd08": "market_return",
+    "idxtrd08": "market_return",
+    "Indexcd": "index_id",
+    "indexcd": "index_id",
+    "Idxtrd05": "index_close",
+    "idxtrd05": "index_close",
     "Mretwd": "market_return",
     "mretwd": "market_return",
     "MarketReturn": "market_return",
     "market_return": "market_return",
+    "Dsmvtll": "market_cap",
+    "dsmvtll": "market_cap",
     "Msmvosd": "market_cap",
     "market_cap": "market_cap",
+    "Clsprc": "close_price",
+    "clsprc": "close_price",
 }
 
 REQUIRED_COLUMNS = ["firm_id", "date", "stock_return", "market_return"]
@@ -43,6 +57,21 @@ def read_table(path: str | Path) -> pd.DataFrame:
     raise ValueError(f"Unsupported file type: {path.suffix}")
 
 
+def remove_csmar_header_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    first_col = df.columns[0]
+    labels_to_drop = {
+        "trading date",
+        "stock code",
+        "index code",
+        "no unit",
+        "unit",
+    }
+    mask = df[first_col].astype(str).str.strip().str.lower().isin(labels_to_drop)
+    return df.loc[~mask].copy()
+
+
 def standardize_columns(
     df: pd.DataFrame,
     column_map: Mapping[str, str] | None = None,
@@ -58,7 +87,7 @@ def clean_returns(
     column_map: Mapping[str, str] | None = None,
     drop_missing: bool = True,
 ) -> pd.DataFrame:
-    cleaned = standardize_columns(df, column_map)
+    cleaned = remove_csmar_header_rows(standardize_columns(df, column_map))
     missing = [col for col in REQUIRED_COLUMNS if col not in cleaned.columns]
     if missing:
         raise ValueError(f"Missing required columns after standardization: {missing}")
@@ -87,9 +116,13 @@ def load_and_clean_returns(
     market_column_map: Mapping[str, str] | None = None,
 ) -> pd.DataFrame:
     stock_df = standardize_columns(read_table(stock_returns_path), stock_column_map)
+    stock_df = remove_csmar_header_rows(stock_df)
 
     if market_returns_path is not None:
         market_df = standardize_columns(read_table(market_returns_path), market_column_map)
+        market_df = remove_csmar_header_rows(market_df)
+        if "index_id" in market_df.columns:
+            market_df = market_df.loc[market_df["index_id"].astype(str).str.zfill(6) == "000300"]
         market_df["date"] = pd.to_datetime(market_df["date"])
         stock_df["date"] = pd.to_datetime(stock_df["date"])
         stock_df = stock_df.merge(

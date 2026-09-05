@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT))
 
 from src.config import (  # noqa: E402
-    ESTIMATION_LENGTH,
+    ESTIMATION_WINDOW,
     EVENT_WINDOWS,
     EVENTS,
     OUTPUT_FIGURES,
@@ -41,7 +41,7 @@ def main() -> None:
         returns,
         events=EVENTS,
         windows=EVENT_WINDOWS,
-        estimation_length=ESTIMATION_LENGTH,
+        estimation_window=ESTIMATION_WINDOW,
     )
 
     for name, table in results.items():

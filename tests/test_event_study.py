@@ -30,7 +30,7 @@ def make_synthetic_returns():
 
 def test_event_study_outputs_are_created():
     df = make_synthetic_returns()
-    result = run_event_study(df, ["2025-04-07"], [(-1, 1)], estimation_length=120)
+    result = run_event_study(df, ["2025-04-07"], [(-1, 1)])
     assert not result["abnormal_returns"].empty
     assert not result["aar_caar"].empty
     assert not result["car"].empty
@@ -39,7 +39,7 @@ def test_event_study_outputs_are_created():
 
 def test_validation_table_reports_targets():
     df = make_synthetic_returns()
-    result = run_event_study(df, ["2025-04-07"], [EventWindow(-1, 1)], estimation_length=120)
+    result = run_event_study(df, ["2025-04-07"], [EventWindow(-1, 1)])
     validation = validate_caar_targets(
         result["aar_caar"],
         {("2025-04-07", -1, 1): {"expected": -0.0546, "tolerance": 0.02}},

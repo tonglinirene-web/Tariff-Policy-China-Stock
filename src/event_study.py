@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
+import numpy as np
 import pandas as pd
 
+from .config import ESTIMATION_WINDOW, FIRST_EVENT_DATE
 from .market_model import MarketModelResult, abnormal_returns, fit_market_model
 
 
@@ -38,11 +40,9 @@ def add_event_time(df: pd.DataFrame, event_date: str | pd.Timestamp) -> pd.DataF
 
 def estimation_sample(
     event_df: pd.DataFrame,
-    estimation_length: int = 120,
-    gap: int = 1,
+    estimation_window: tuple[int, int] = ESTIMATION_WINDOW,
 ) -> pd.DataFrame:
-    min_event_time = -gap - estimation_length
-    max_event_time = -gap - 1
+    min_event_time, max_event_time = estimation_window
     return event_df.loc[
         event_df["event_time"].between(min_event_time, max_event_time)
     ].copy()
@@ -56,15 +56,21 @@ def compute_firm_abnormal_returns(
     df: pd.DataFrame,
     event_date: str | pd.Timestamp,
     window: EventWindow,
-    estimation_length: int = 120,
+    estimation_window: tuple[int, int] = ESTIMATION_WINDOW,
+    estimation_anchor_date: str | pd.Timestamp = FIRST_EVENT_DATE,
     minimum_estimation_obs: int = 60,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     event_df = add_event_time(df, event_date)
+    estimation_df = add_event_time(df, estimation_anchor_date)
     firm_event_rows = []
     models: list[MarketModelResult] = []
 
     for firm_id, firm_df in event_df.groupby("firm_id"):
-        estimate_df = estimation_sample(firm_df, estimation_length=estimation_length)
+        firm_estimation_df = estimation_df.loc[estimation_df["firm_id"] == firm_id]
+        estimate_df = estimation_sample(
+            firm_estimation_df,
+            estimation_window=estimation_window,
+        )
         if len(estimate_df.dropna(subset=["stock_return", "market_return"])) < minimum_estimation_obs:
             continue
         model = fit_market_model(estimate_df)
@@ -77,6 +83,14 @@ def compute_firm_abnormal_returns(
         model_event_df["alpha"] = model.alpha
         model_event_df["beta"] = model.beta
         model_event_df["idio_vol"] = model.idio_vol
+        model_event_df["estimation_obs"] = model.n_obs
+        if "market_cap" in estimate_df.columns:
+            average_market_cap = estimate_df["market_cap"].dropna().mean()
+            model_event_df["size"] = (
+                float(np.log(average_market_cap)) if average_market_cap > 0 else np.nan
+            )
+        elif "size" in estimate_df.columns:
+            model_event_df["size"] = float(estimate_df["size"].dropna().mean())
         model_event_df["abnormal_return"] = abnormal_returns(model_event_df, model)
         firm_event_rows.append(model_event_df)
         models.append(model)
@@ -122,7 +136,8 @@ def run_event_study(
     df: pd.DataFrame,
     events: Iterable,
     windows: Iterable[tuple[int, int] | EventWindow],
-    estimation_length: int = 120,
+    estimation_window: tuple[int, int] = ESTIMATION_WINDOW,
+    estimation_anchor_date: str | pd.Timestamp = FIRST_EVENT_DATE,
 ) -> dict[str, pd.DataFrame]:
     abnormal_frames = []
     model_frames = []
@@ -138,7 +153,8 @@ def run_event_study(
                 df,
                 event_date=event_date,
                 window=window,
-                estimation_length=estimation_length,
+                estimation_window=estimation_window,
+                estimation_anchor_date=estimation_anchor_date,
             )
             if not abnormal_df.empty:
                 abnormal_frames.append(abnormal_df)

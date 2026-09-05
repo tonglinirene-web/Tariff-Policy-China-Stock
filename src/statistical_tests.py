@@ -82,3 +82,38 @@ def validate_caar_targets(
             }
         )
     return pd.DataFrame(rows)
+
+
+def validate_regression_targets(fit, regression_targets: dict) -> pd.DataFrame:
+    rows = []
+    coefficients = regression_targets.get("coefficients", {})
+    for variable, expected in coefficients.items():
+        actual = float(fit.params[variable]) if variable in fit.params.index else np.nan
+        rows.append(
+            {
+                "metric": f"coef_{variable}",
+                "actual": actual,
+                "expected": expected,
+                "difference": actual - expected if not np.isnan(actual) else np.nan,
+            }
+        )
+
+    if hasattr(fit, "nobs"):
+        rows.append(
+            {
+                "metric": "observations",
+                "actual": float(fit.nobs),
+                "expected": regression_targets.get("observations"),
+                "difference": float(fit.nobs) - regression_targets.get("observations"),
+            }
+        )
+    if hasattr(fit, "rsquared"):
+        rows.append(
+            {
+                "metric": "r_squared",
+                "actual": float(fit.rsquared),
+                "expected": regression_targets.get("r_squared"),
+                "difference": float(fit.rsquared) - regression_targets.get("r_squared"),
+            }
+        )
+    return pd.DataFrame(rows)
